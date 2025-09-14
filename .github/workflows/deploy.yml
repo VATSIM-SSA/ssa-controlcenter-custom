@@ -39,9 +39,10 @@ jobs:
 
       - name: Debug workspace
         run: |
+          pwd
           ls -la
-          test -f docker-compose.yml || (echo "docker-compose.yml missing" && exit 1)
-          test -f Caddyfile || (echo "Caddyfile missing" && exit 1)
+          test -f docker-compose.yml || (echo "❌ docker-compose.yml missing" && exit 1)
+          test -f Caddyfile || (echo "❌ Caddyfile missing" && exit 1)
 
       - name: Validate SSH key & passphrase
         run: |
