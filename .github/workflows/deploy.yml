@@ -50,10 +50,10 @@ jobs:
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           script: |
-            sudo mkdir -p ${{ env.DEPLOY_PATH }}
-            sudo chown -R $USER:$USER ${{ env.DEPLOY_PATH }}
-            sudo mkdir -p /srv/cc-data/files
-            sudo chown -R 33:33 /srv/cc-data/files
+            mkdir -p ${{ env.DEPLOY_PATH }}
+            chown -R $USER:$USER ${{ env.DEPLOY_PATH }}
+            mkdir -p /srv/cc-data/files
+            chown -R 33:33 /srv/cc-data/files
 
       - name: Copy infra files to droplet
         uses: appleboy/scp-action@v0.1.7
