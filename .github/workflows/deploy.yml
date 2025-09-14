@@ -43,6 +43,18 @@ jobs:
           test -f docker-compose.yml || (echo "docker-compose.yml missing" && exit 1)
           test -f Caddyfile || (echo "Caddyfile missing" && exit 1)
 
+      - name: Validate SSH key & passphrase
+        run: |
+          set -e
+          printf '%s\n' "${{ secrets.DO_SSH_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
+          if ssh-keygen -y -P "${{ secrets.DO_SSH_PASSPHRASE }}" -f key.pem > /dev/null 2>&1; then
+            echo "✅ Private key + passphrase OK"
+          else
+            echo "❌ Key invalid OR passphrase missing/incorrect"
+            exit 1
+          fi
+
       - name: Ensure target dir on droplet
         uses: appleboy/ssh-action@v1.2.0
         with:
