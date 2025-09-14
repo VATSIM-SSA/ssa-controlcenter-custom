@@ -1,0 +1,61 @@
+name: Build & Deploy CC (custom)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/vatsim-ssa/ssa-controlcenter-custom:main
+  DEPLOY_PATH: /opt/controlcenter
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push image
+        run: |
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy infra files to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          source: "docker-compose.yml,Caddyfile"
+          target: ${{ env.DEPLOY_PATH }}
+
+      - name: Remote deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /srv/cc-files /srv/cc-sessions
+            # Login to GHCR to pull the private image
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            cd $DEPLOY_PATH
+            docker compose pull
+            docker compose up -d --remove-orphans
+            # Sanity: run migrations again (idempotent)
+            docker compose exec -T control-center php artisan migrate --force
+            docker compose exec -T control-center php artisan migrate --path=/opt/custom/migrations --force

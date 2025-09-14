@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  control-center:
+    image: ghcr.io/vatsim-ssa/ssa-controlcenter-custom:main
+    env_file:
+      - .env
+    depends_on:
+      - caddy
+    networks: [cc]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - /srv/cc-data/files:/app/storage/app/public/files
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    networks: [cc]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - ACME_AGREE=true
+      - EMAIL=admin@vatssa.com
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  cc:
+    driver: bridge
