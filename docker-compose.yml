@@ -1,41 +1,31 @@
-version: "3.9"
-
 services:
   control-center:
     image: ghcr.io/vatsim-ssa/ssa-controlcenter-custom:main
-    env_file:
-      - .env
-    depends_on:
-      - caddy
-    networks: [cc]
+    env_file: /opt/controlcenter/.env
     restart: unless-stopped
+    networks: [ccnet]
+    volumes:
+      - /srv/cc-data/files:/app/storage/app/public/files
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/health"] # route already exists upstream
       interval: 30s
       timeout: 5s
       retries: 5
-    volumes:
-      - /srv/cc-data/files:/app/storage/app/public/files
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2
     restart: unless-stopped
-    networks: [cc]
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      - ACME_AGREE=true
-      - EMAIL=admin@vatssa.com
+    networks: [ccnet]
+    ports: ["80:80", "443:443"]
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-
-volumes:
-  caddy-data:
-  caddy-config:
+      - /opt/controlcenter/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [control-center]
 
 networks:
-  cc:
-    driver: bridge
+  ccnet: {}
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}

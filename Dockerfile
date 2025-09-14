@@ -1,18 +1,9 @@
-# ssa-controlcenter-custom/Dockerfile
-FROM ghcr.io/vatsim-scandinavia/control-center:v6
+# Pin a known-good upstream release (update as you wish)
+FROM ghcr.io/vatsim-scandinavia/controlcenter:v6.3.4
 
-# ---- Optional theming via upstream helper (rebuilds assets)
-# ENV VITE_THEME_PRIMARY="#0b5fff"
-# RUN chmod +x container/theme/build.sh && container/theme/build.sh
+# 1) Copy any upstream file overrides (same paths as /app)
+#    e.g., migration fixes, blade/view overrides, config stubs, etc.
+COPY overrides/ /app/
 
-# ---- Bring in SSA customizations
-# Put your Laravel migrations here and any public assets overrides
-# (Use a unique folder so we can point artisan at it)
+# 2) Copy division-only migrations (run AFTER core)
 COPY custom/migrations/ /opt/custom/migrations/
-COPY custom/public/ /app/public/
-
-# Run core + custom migrations at container start, then launch Apache
-# (Upstream demo uses this pattern)
-CMD bash -lc "php artisan migrate --force && \
-              php artisan migrate --path=/opt/custom/migrations --force && \
-              exec apache2-foreground"
