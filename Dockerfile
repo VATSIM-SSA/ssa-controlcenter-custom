@@ -9,7 +9,7 @@ FROM ghcr.io/vatsim-scandinavia/control-center:v6
 # Put your Laravel migrations here and any public assets overrides
 # (Use a unique folder so we can point artisan at it)
 COPY custom/migrations/ /opt/custom/migrations/
-# 
+COPY custom/public/ /app/public/
 
 # Run core + custom migrations at container start, then launch Apache
 # (Upstream demo uses this pattern)
