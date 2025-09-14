@@ -33,16 +33,15 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    # environment: production  # <- uncomment if you stored droplet secrets in an env
     steps:
       - uses: actions/checkout@v4
 
       - name: Debug workspace
         run: |
+          set -e
           pwd
           ls -la
-          test -f docker-compose.yml || (echo "❌ docker-compose.yml missing" && exit 1)
-          test -f Caddyfile || (echo "❌ Caddyfile missing" && exit 1)
+          ls -l ./docker-compose.yml ./Caddyfile
 
       - name: Validate SSH key & passphrase
         run: |
@@ -69,16 +68,20 @@ jobs:
             mkdir -p /srv/cc-data/files
             chown -R 33:33 /srv/cc-data/files
 
-      - name: Copy infra files to droplet
+      # 👉 Create our own bundle so scp-action always has something concrete to copy
+      - name: Pack infra bundle
+        run: |
+          tar czf infra.tar.gz docker-compose.yml Caddyfile
+          ls -lh infra.tar.gz
+
+      - name: Copy infra bundle to droplet
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DO_SSH_HOST }}
           username: ${{ secrets.DO_SSH_USER }}
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          source: |
-            docker-compose.yml
-            Caddyfile
+          source: "infra.tar.gz"
           target: ${{ env.DEPLOY_PATH }}
 
       - name: Remote deploy
@@ -89,10 +92,14 @@ jobs:
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
           script: |
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             cd ${{ env.DEPLOY_PATH }}
+            tar xzf infra.tar.gz
+            rm -f infra.tar.gz
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
+
             # Core migrations (idempotent)
             docker compose exec -T control-center php artisan migrate --force || true
             # Custom migrations only if present
