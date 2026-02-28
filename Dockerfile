@@ -47,6 +47,7 @@ COPY --from=frontend /app/public/          /app/public/
 RUN chown -R www-data:www-data /app && \
     chmod -R 755 storage bootstrap/cache && \
     composer install --no-dev --no-interaction --prefer-dist && \
+    composer require aws/aws-sdk-php --no-interaction --prefer-dist && \
     mkdir -p /app/storage/app/public/files
 
 # Entry point from upstream
