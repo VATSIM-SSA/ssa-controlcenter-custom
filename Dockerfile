@@ -12,6 +12,7 @@ RUN git clone --depth=1 --branch "${UPSTREAM_REF}" "${UPSTREAM_REPO}" /src
 FROM node:23.3.0-alpine AS frontend
 WORKDIR /app
 COPY --from=src /src/ /app/
+COPY overrides/ /app/
 RUN npm ci --omit dev && npm run build
 
 # ---------- final image (matches upstream base & steps) ----------
@@ -56,7 +57,6 @@ ENTRYPOINT [ "controlcenter-entrypoint" ]
 
 # ---------- your customizations ----------
 # 1) Override any upstream files by mirroring path under /app
-COPY overrides/ /app/
 # 2) Division-only migrations run AFTER core
 COPY custom/migrations/ /opt/custom/migrations/
 
